@@ -6,24 +6,10 @@ package:
   individually: true
 
 plugins:
-  - serverless-bundle # Package our functions with Webpack
-  - serverless-offline
+#  - serverless-bundle # Package our functions with Webpack
+#  - serverless-offline
   - serverless-localstack
-  - serverless-dotenv-plugin # Load .env as environment variables
-  - serverless-bundle
-
-provider:
-  name: aws
-  runtime: nodejs12.x
-  # stage: dev
-  # region: us-east-1
-  # To load environment variables externally
-  # rename env.example to .env and uncomment
-  # the following line. Also, make sure to not
-  # commit your .env.
-  #
-  #environment:
-  #  SAMPLE_ENV_VAR: ${env:SAMPLE_ENV_VAR}
+#  - serverless-dotenv-plugin # Load .env as environment variables
 
 custom:
   localstack:
@@ -35,10 +21,87 @@ custom:
     lambda:
       mountCode: true
 
+provider:
+  name: aws
+  runtime: nodejs12.x
+  memorySize: 128
+  lambdaHashingVersion: 20201221
+  iam:
+    role:
+      statements:
+        - Effect: "Allow"
+          Action: 
+            - "dynamodb:Scan"
+            - "dynamodb:GetItem"
+            - "dynamodb:PutItem"
+            - "dynamodb:Query"
+            - "dynamodb:UpdateItem"
+            - "dynamodb:DeleteItem"
+            - "dynamodb:DescribeTable"
+            - "dynamodb:DescribeStream"
+            - "dynamodb:GetRecords"
+            - "dynamodb:GetShardIterator"
+            - "dynamodb:ListStreams"
+          Resource: 
+            - Fn::GetAtt:
+              - NotesTable
+              - Arn
+  environment:
+    TableName: "notes-${opt:stage}"
+
+
+# Lambda Functions
 functions:
-  hello:
-    handler: handler.hello
+  create:
+    handler: handlers/create.main
     events:
       - http:
-          path: hello
+          path: notes
+          method: post
+
+  get:
+    handler: handlers/get.main
+    events:
+      - http:
+          path: notes/{id}
           method: get
+
+  list:
+    handler: handlers/list.main
+    events:
+      - http:
+          path: notes
+          method: get
+
+  update:
+    handler: handlers/update.main
+    events:
+      - http:
+          path: notes/{id}
+          method: put
+
+  delete:
+    handler: handlers/delete.main
+    events:
+      - http:
+          path: notes/{id}
+          method: delete
+
+# DynamoDB
+resources:
+  Resources:
+    NotesTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: "notes-${opt:stage}"
+        AttributeDefinitions:
+          - AttributeName: "userId"
+            AttributeType: "S"
+          - AttributeName: "noteId"
+            AttributeType: "S"
+        KeySchema:
+          - AttributeName: "userId"
+            KeyType: "HASH"
+          - AttributeName: "noteId"
+            KeyType: "RANGE"
+        BillingMode: "PAY_PER_REQUEST"

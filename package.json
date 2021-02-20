@@ -19,6 +19,9 @@
     "serverless-offline": "^5.3.3"
   },
   "dependencies": {
-    "kuuid": "^0.6.0"
+    "kuuid": "^0.6.0",
+    "middy": "^0.36.0",
+    "serverless-s3-sync": "^1.16.1",
+    "uuid": "^3.4.0"
   }
 }
